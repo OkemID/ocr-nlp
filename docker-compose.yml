@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  ocr-nlp:
+    build: ./services/ocr-nlp
+    container_name: ocr-nlp
+    environment:
+      - MAX_PDF_PAGES=5
+      - PDF_DPI=220
+    ports:
+      - "8000:8000"
+
+  node-api:
+    build: ./services/node-api
+    container_name: node-api
+    environment:
+      - PORT=4000
+      - OCR_NLP_BASE=http://ocr-nlp:8000
+    depends_on:
+      - ocr-nlp
+    ports:
+      - "4000:4000"

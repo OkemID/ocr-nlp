@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "OkemID",
+    "slug": "okemid",
+    "scheme": "okemid",
+    "sdkVersion": "51.0.0",
+    "extra": { "eas": { "projectId": "fill-later" } }
+  }
+}
