@@ -39,13 +39,19 @@ def _ocr_image(pil_im: Image.Image) -> List[OCRItem]:
     if pil_im.mode != "RGB":
         pil_im = pil_im.convert("RGB")
     arr = np.asarray(pil_im)
-    result = reader.readtext(arr, detail=1, paragraph=False)
+    result = reader.readtext(arr, detail=1, paragraph=True)
     out: List[OCRItem] = []
     for item in result:
-        bbox = [[float(x) for x in point] for point in item[0]]
-        text = str(item[1])
-        conf = float(item[2])
-        out.append((bbox, text, conf))
+        if isinstance(item, (list, tuple)) and len(item) >= 2:
+            try:
+                bbox = [[float(x) for x in point] for point in item[0]]
+                text = str(item[1])
+                conf = float(item[2]) if len(item) > 2 else None
+                out.append((bbox, text, conf))
+            except Exception as e:
+                logging.warning(f"Failed to parse item {item}: {e}")
+        else:
+            logging.warning(f"Skipping unexpected OCR item: {item}")
     return out
 
 
