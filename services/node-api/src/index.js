@@ -19,6 +19,8 @@ const OCR_NLP_BASE = process.env.OCR_NLP_BASE || "http://ocr-nlp:8000";
 
 app.post("/ocr/extract", upload.single("file"), async (req, res) => {
   try {
+
+    console.log('File received:', req.file);
     if (!req.file) return res.status(400).json({ error: "file required" });
 
     // forward to FastAPI
@@ -32,6 +34,7 @@ app.post("/ocr/extract", upload.single("file"), async (req, res) => {
 
     res.status(r.status).json(r.data);
   } catch (e) {
+    console.log('OCR Gateway error:', err?.response?.data || err.message);
     const status = e.response?.status || 500;
     res.status(status).json({ error: e.message, detail: e.response?.data });
   }
