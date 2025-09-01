@@ -9,25 +9,25 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "preinstall": "npx npm-force-resolutions"
-
   },
   "dependencies": {
-    "expo": "53.0.0",
-    "expo-document-picker": "~12.0.0",
-    "expo-router": "^3.5.4",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-native": "0.74.0",
-    "react-native-web": "~0.19.11"
+    "expo": "53.0.22",
+    "expo-document-picker": "~13.1.6",
+    "expo-router": "~5.1.5",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-native": "0.79.5",
+    "react-native-web": "^0.20.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.9",
-    "metro": "^0.81.1",
+    "metro": "^0.82.0",
     "metro-config": "^0.81.1",
     "npm-force-resolutions": "^0.0.10"
   },
   "resolutions": {
     "metro": "0.81.1",
     "metro-config": "0.81.1"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
