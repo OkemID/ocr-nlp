@@ -1,44 +1,72 @@
+
+// dotenv.config();
+
+// const app = express();
+// app.use(cors());
+// app.use(morgan("dev"));
+// app.use(express("dev"));
+// app.get("/health", (_, res) => res.json({ ok: true, service: "node-api" }));
+
+
 import express from "express";
-import cors from "cors";
-import morgan from "morgan";
 import multer from "multer";
 import axios from "axios";
-import dotenv from "dotenv";
 import FormData from "form-data";
+import { createReadStream, unlink } from "fs";
 
-dotenv.config();
 
 const app = express();
-app.use(cors());
-app.use(morgan("dev"));
-app.get("/health", (_, res) => res.json({ ok: true, service: "node-api" }));
+const upload = multer({ dest: 'uploads/' });
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+// Optional: CORS for local dev
+// const cors = require('cors');
+// app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 
-const OCR_NLP_BASE = process.env.OCR_NLP_BASE || "http://ocr-nlp:8000";
+// Health check
+app.get('/api/health', (req, res) => res.json({ ok: true, service: 'node-bff' }));
 
-app.post("/ocr/extract", upload.single("file"), async (req, res) => {
+// Proxy endpoint that the frontend calls
+app.post('/ocr/extract', upload.single('file'), async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'file is required' });
+    }
 
-    console.log('File received:', req.file);
-    if (!req.file) return res.status(400).json({ error: "file required" });
+    // (Optional) Validate MIME/type/size here
 
-    // forward to FastAPI
+    // Build multipart form to send to Python
     const form = new FormData();
-    form.append("file", req.file.buffer, { filename: req.file.originalname, contentType: req.file.mimetype });
+    form.append(
+      'file',
+      createReadStream(req.file.path),
+      { filename: req.file.originalname, contentType: req.file.mimetype }
+    );
 
-    const r = await axios.post(`${OCR_NLP_BASE}/ocr/extract`, form, {
-      headers: form.getHeaders(),
-      maxBodyLength: Infinity
+    // Forward to FastAPI service
+    const pyUrl = `${
+      process.env.OCR_NLP_BASE || "http://ocr-nlp:8000"
+    }/ocr/extract`;
+    const pyResp = await axios.post(pyUrl, form, {
+      headers: form.getHeaders(), // includes boundary
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+      timeout: 60_000,            // adjust as needed
     });
 
-    res.status(r.status).json(r.data);
-  } catch (e) {
-    console.log('OCR Gateway error:', err?.response?.data || err.message);
-    const status = e.response?.status || 500;
-    res.status(status).json({ error: e.message, detail: e.response?.data });
+    // Clean up temp file
+    unlink(req.file.path, () => {});
+
+    // Return OCR JSON to frontend
+    res.status(pyResp.status).json(pyResp.data);
+  } catch (err) {
+    // Clean up temp file if exists
+    if (req.file) unlink(req.file.path, () => {});
+    const status = err.response?.status || 500;
+    const detail = err.response?.data || { error: err.message };
+    res.status(status).json({ message: 'OCR proxy failed', detail });
   }
 });
 
-const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`node-api listening on :${port}`));
+// Start server
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log(`Node BFF running on :${PORT}`));

@@ -9,6 +9,7 @@ from PIL import Image
 from pdf2image import convert_from_bytes
 import easyocr
 import numpy as np
+import json
 import traceback
 
 # ---------- Logging Setup ----------
@@ -90,6 +91,8 @@ async def ocr_extract(file: UploadFile = File(...)):
                 add_block(text, bbox, conf, 1)
 
         logging.info(f"OCR completed. Total blocks extracted: {len(blocks)}")
+        safe_blocks = json.loads(json.dumps(blocks, default=lambda o: float(o) if isinstance(o, np.floating) else int(o) if isinstance(o, np.integer) else str(o)))
+
         return JSONResponse({"blocks": blocks, "count": len(blocks)})
 
     except Exception as e:
