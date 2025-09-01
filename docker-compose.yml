@@ -20,14 +20,3 @@ services:
       - ocr-nlp
     ports:
       - "4000:4000"
-
-  ocr-tester:
-    build:
-      context: ./services/ocr-nlp/src
-    container_name: ocr-tester
-    depends_on:
-      - ocr-nlp
-    volumes:
-      - ./services/ocr-nlp/src/file-uploads:/app/file-uploads
-    working_dir: /app
-    command: ["python", "test_client.py"]

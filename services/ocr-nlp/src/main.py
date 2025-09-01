@@ -10,7 +10,6 @@ from pdf2image import convert_from_bytes
 import easyocr
 import numpy as np
 import json
-import traceback
 
 # ---------- Logging Setup ----------
 logging.basicConfig(
@@ -53,48 +52,37 @@ def _ocr_image(pil_im: Image.Image) -> List[OCRItem]:
 @app.post("/ocr/extract")
 async def ocr_extract(file: UploadFile = File(...)):
     logging.info(f"Incoming OCR request: filename={file.filename}, content_type={file.content_type}")
-    
+
     try:
         data = await file.read()
-        if len(data) == 0:
-            logging.warning("Received empty file.")
-            raise HTTPException(status_code=400, detail="empty file")
+        if not data:
+            raise HTTPException(status_code=400, detail="Empty file uploaded.")
 
-        content_type = file.content_type or ""
-        blocks: List[dict] = []
+        blocks = []
 
-        # 🔐 Fix: Safely cast every value into native Python types
         def add_block(text, bbox=None, conf=None, page=None):
-            safe_bbox = (
-                [[float(coord) for coord in point] for point in bbox]
-                if bbox else None
-            )
-            safe_conf = float(conf) if conf is not None else None
-            safe_page = int(page) if page is not None else None
-            safe_text = str(text)
-
             blocks.append({
-                "text": safe_text,
-                "bbox": safe_bbox,
-                "confidence": safe_conf,
-                "page": safe_page
+                "text": str(text),
+                "bbox": bbox,
+                "confidence": float(conf) if conf else None,
+                "page": int(page) if page else None
             })
 
+        # Detect if PDF
+        content_type = file.content_type or ""
         if "pdf" in content_type or (file.filename and file.filename.lower().endswith(".pdf")):
             pages = convert_from_bytes(data, dpi=PDF_DPI, first_page=1, last_page=MAX_PDF_PAGES)
-            for i, im in enumerate(pages, start=1):
-                for (bbox, text, conf) in _ocr_image(im):
-                    add_block(text, bbox, conf, i)
+            for page_num, img in enumerate(pages, 1):
+                for bbox, text, conf in _ocr_image(img):
+                    add_block(text, bbox, conf, page_num)
         else:
-            im = Image.open(io.BytesIO(data))
-            for (bbox, text, conf) in _ocr_image(im):
+            image = Image.open(io.BytesIO(data))
+            for bbox, text, conf in _ocr_image(image):
                 add_block(text, bbox, conf, 1)
 
-        logging.info(f"OCR completed. Total blocks extracted: {len(blocks)}")
-        safe_blocks = json.loads(json.dumps(blocks, default=lambda o: float(o) if isinstance(o, np.floating) else int(o) if isinstance(o, np.integer) else str(o)))
-
-        return JSONResponse({"blocks": blocks, "count": len(blocks)})
+        logging.info(f"OCR completed. Extracted {len(blocks)} blocks.")
+        return {"blocks": blocks, "count": len(blocks)}
 
     except Exception as e:
-        logging.error("OCR failed", exc_info=True)
-        raise HTTPException(status_code=422, detail=f"OCR failed: {e}")
+        logging.error(f"OCR processing failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"OCR failed: {e}")
