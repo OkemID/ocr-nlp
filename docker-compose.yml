@@ -7,8 +7,17 @@ services:
     environment:
       - MAX_PDF_PAGES=5
       - PDF_DPI=220
+      - EASYOCR_MODEL_DIR=/models
     ports:
       - "8000:8000"
+    volumes:
+      - easyocr-models:/models
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   node-api:
     build: ./services/node-api
@@ -20,3 +29,6 @@ services:
       - ocr-nlp
     ports:
       - "4000:4000"
+
+volumes:
+  easyocr-models:
