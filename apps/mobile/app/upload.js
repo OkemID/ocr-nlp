@@ -2,7 +2,8 @@ import * as DocumentPicker from "expo-document-picker";
 import { useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, ScrollView } from "react-native";
 
-const NODE_API_BASE = process.env.EXPO_PUBLIC_NODE_API_BASE || "http://localhost:4000";
+const NODE_API_BASE =
+  process.env.EXPO_PUBLIC_NODE_API_BASE || "http://10.242.13.230:4000";
 
 export default function Upload() {
   const [result, setResult] = useState(null);
